@@ -1,6 +1,7 @@
 # Jukebox
 
-Egyszerű webes MP3-lejátszó, amely egy megosztott Google Drive mappában lévő zenéket játssza le.
+Egyszerű webes MP3-lejátszó. A zenék ennek a repónak a `zene/` mappájában vannak,
+az oldal automatikusan listázza őket. API-kulcs nem kell.
 
 **Funkciók**
 - számok listája kereséssel, kattintásra lejátszás
@@ -9,43 +10,23 @@ Egyszerű webes MP3-lejátszó, amely egy megosztott Google Drive mappában lév
 - 🔁 **Végtelen ismétlés**: a kiválasztott szám ismétlése, be- és kikapcsolható
 - pozíció- és hangerő-csúszka, szóköz billentyű = lejátszás/szünet
 
-Csak statikus fájlokból áll (`index.html`, `style.css`, `app.js`, `config.js`), szerver nem kell hozzá.
+## Zenék hozzáadása
+1. A GitHubon nyisd meg a `zene` mappát → **Add file → Upload files**.
+2. Húzd be az MP3 fájlokat, majd **Commit changes** (a `main` ágra).
+3. Pár perc múlva az új számok megjelennek a weboldalon.
 
-## Beállítás
+A dal címe a fájlnévből lesz (kiterjesztés nélkül, az `_` szóközzé alakul), pl. `Kedvenc_dal.mp3` → „Kedvenc dal”.
+Almappák is használhatók. Egy fájl legfeljebb 100 MB lehet.
 
-### 1. A Drive mappa megosztása
-A Google Drive-ban a mappán: **Megosztás → Általános hozzáférés → „Bárki, aki rendelkezik a linkkel” (Megtekintő)**.
-A mappa azonosítója a link `/folders/` utáni része. Ez már be van írva a `config.js` fájlba.
+## Közzététel (egyszeri beállítás)
+A repó oldalán: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
-### 2. Google API-kulcs létrehozása (ingyenes)
-1. Nyisd meg: <https://console.cloud.google.com/> és hozz létre egy projektet.
-2. **APIs & Services → Library**: keresd meg a **Google Drive API**-t, majd **Enable**.
-3. **APIs & Services → Credentials → Create credentials → API key**.
-4. Ajánlott korlátozni a kulcsot:
-   - *API restrictions*: csak **Google Drive API**
-   - *Application restrictions → Websites*: a weboldalad címe, pl. `https://FELHASZNALO.github.io/*`
-5. Másold be a kulcsot a `config.js` fájl `API_KEY` mezőjébe.
-
-> Az API-kulcs látható lesz a weboldal forráskódjában. Ez nyilvános, csak olvasható mappánál rendben van, de a fenti korlátozásokat érdemes beállítani.
-
-### 3. Közzététel GitHub Pages-en
-A repó oldalán: **Settings → Pages → Build and deployment → Source: Deploy from a branch**, válaszd ki az ágat és a `/ (root)` mappát.
-Néhány perc múlva az oldal elérhető lesz: `https://FELHASZNALO.github.io/jukebox/`.
-
-## Kézi lejátszási lista (API-kulcs nélkül)
-Ha az `API_KEY` üres, az oldal a `tracks.json` fájlból olvassa a számokat:
-
-```json
-[
-  { "title": "Első dal", "id": "GOOGLE_DRIVE_FAJL_AZONOSITO" },
-  { "title": "Második dal", "url": "zene/masodik.mp3" }
-]
-```
-
-Az `id` egy Drive-fájl azonosítója (a fájl linkjében a `/d/` utáni rész). Az `url` bármilyen közvetlen MP3-link vagy a repóban lévő fájl útvonala lehet.
+Ezután minden `main` ágra történő feltöltéskor a `.github/workflows/pages.yml` elkészíti a
+zenelistát (`tracks.json`) és közzéteszi az oldalt itt: `https://FELHASZNALO.github.io/jukebox/`.
 
 ## Helyi kipróbálás
 ```bash
+python3 scripts/build_tracks.py
 python3 -m http.server 8000
 ```
 Ezután nyisd meg a böngészőben: <http://localhost:8000>.

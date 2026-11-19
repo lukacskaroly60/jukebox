@@ -1,7 +1,6 @@
 (function () {
   "use strict";
 
-  const cfg = window.JUKEBOX_CONFIG || {};
   const $ = (id) => document.getElementById(id);
 
   const audio = $("audio");
@@ -26,59 +25,50 @@
     return name.replace(/\.(mp3|m4a|wav|ogg|flac|aac)$/i, "").replace(/_/g, " ");
   }
 
-  async function loadFromDrive() {
-    const files = [];
-    let pageToken = "";
-    do {
-      const q = `'${cfg.FOLDER_ID}' in parents and trashed = false and (mimeType contains 'audio/' or name contains '.mp3')`;
-      const params = new URLSearchParams({
-        q,
-        key: cfg.API_KEY,
-        fields: "nextPageToken, files(id, name, mimeType)",
-        pageSize: "1000",
-        supportsAllDrives: "true",
-        includeItemsFromAllDrives: "true",
-      });
-      if (pageToken) params.set("pageToken", pageToken);
-      const res = await fetch("https://www.googleapis.com/drive/v3/files?" + params);
-      if (!res.ok) {
-        let msg = res.status + " " + res.statusText;
-        try { msg = (await res.json()).error.message || msg; } catch (e) { /* ignore */ }
-        throw new Error("Google Drive hiba: " + msg);
-      }
-      const data = await res.json();
-      files.push(...(data.files || []));
-      pageToken = data.nextPageToken || "";
-    } while (pageToken);
+  const MUSIC_DIR = "zene/";
+  const AUDIO_RE = /\.(mp3|m4a|ogg|wav|flac|aac)$/i;
 
-    return files.map((f) => ({
-      title: prettyName(f.name),
-      url: `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(f.id)}?alt=media&key=${encodeURIComponent(cfg.API_KEY)}`,
-    }));
+  function toTrack(path) {
+    const file = path.split("/").pop();
+    return {
+      title: prettyName(file),
+      url: path.split("/").map(encodeURIComponent).join("/"),
+    };
   }
 
+  // 1) tracks.json: a GitHub Actions munkafolyamat generálja a zene/ mappából
   async function loadFromJson() {
     const res = await fetch("tracks.json", { cache: "no-cache" });
-    if (!res.ok) throw new Error("A tracks.json nem tölthető be.");
+    if (!res.ok) return [];
     const data = await res.json();
-    return data.map((t) => ({
-      title: t.title || prettyName(t.name || t.url || t.id || "Ismeretlen"),
-      url: t.url || `https://drive.google.com/uc?export=download&id=${encodeURIComponent(t.id)}`,
-    }));
+    return data.map((p) => (typeof p === "string" ? toTrack(p) : { title: p.title, url: p.url }));
+  }
+
+  // 2) Tartalék: a zene/ mappa kiolvasása a GitHub API-ból (kulcs nélkül, *.github.io oldalon)
+  async function loadFromGitHub() {
+    const host = location.hostname;
+    if (!host.endsWith(".github.io")) return [];
+    const owner = host.split(".")[0];
+    const repo = location.pathname.split("/").filter(Boolean)[0] || host;
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.tree || [])
+      .filter((n) => n.type === "blob" && n.path.startsWith(MUSIC_DIR) && AUDIO_RE.test(n.path))
+      .map((n) => toTrack(n.path));
   }
 
   async function init() {
     try {
-      tracks = cfg.API_KEY ? await loadFromDrive() : await loadFromJson();
+      tracks = await loadFromJson();
+      if (!tracks.length) tracks = await loadFromGitHub();
     } catch (err) {
-      setStatus(err.message, true);
+      setStatus("Hiba a számok betöltésekor: " + err.message, true);
       return;
     }
     tracks.sort((a, b) => a.title.localeCompare(b.title, "hu", { numeric: true }));
     if (!tracks.length) {
-      setStatus(cfg.API_KEY
-        ? "A megosztott mappában nem található zenefájl."
-        : "Nincs beállítva API-kulcs (config.js), és a tracks.json is üres.", true);
+      setStatus("Még nincs zene: tölts fel MP3 fájlokat a repó zene/ mappájába.", true);
       return;
     }
     setStatus(tracks.length + " szám");
