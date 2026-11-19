@@ -36,12 +36,18 @@
     };
   }
 
-  // 1) tracks.json: a GitHub Actions munkafolyamat generálja a zene/ mappából
-  async function loadFromJson() {
-    const res = await fetch("tracks.json", { cache: "no-cache" });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.map((p) => (typeof p === "string" ? toTrack(p) : { title: p.title, url: p.url }));
+  // 1) tracks.php: saját (PHP-s) tárhelyen élőben listázza a zene/ mappát
+  // 2) tracks.json: a scripts/build_tracks.py vagy a GitHub Actions készíti
+  async function loadList(file) {
+    try {
+      const res = await fetch(file, { cache: "no-cache" });
+      if (!res.ok) return [];
+      const data = JSON.parse(await res.text()); // PHP nélkül a .php forrása jön vissza -> hiba
+      if (!Array.isArray(data)) return [];
+      return data.map((p) => (typeof p === "string" ? toTrack(p) : { title: p.title, url: p.url }));
+    } catch (e) {
+      return [];
+    }
   }
 
   // 2) Tartalék: a zene/ mappa kiolvasása a GitHub API-ból (kulcs nélkül, *.github.io oldalon)
@@ -60,7 +66,8 @@
 
   async function init() {
     try {
-      tracks = await loadFromJson();
+      tracks = await loadList("tracks.php");
+      if (!tracks.length) tracks = await loadList("tracks.json");
       if (!tracks.length) tracks = await loadFromGitHub();
     } catch (err) {
       setStatus("Hiba a számok betöltésekor: " + err.message, true);
@@ -68,7 +75,7 @@
     }
     tracks.sort((a, b) => a.title.localeCompare(b.title, "hu", { numeric: true }));
     if (!tracks.length) {
-      setStatus("Még nincs zene: tölts fel MP3 fájlokat a repó zene/ mappájába.", true);
+      setStatus("Még nincs zene: tölts fel MP3 fájlokat a zene/ mappába.", true);
       return;
     }
     setStatus(tracks.length + " szám");
