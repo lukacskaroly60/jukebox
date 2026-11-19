@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jukebox</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="jukebox">
+    <header class="top">
+      <h1>Jukebox</h1>
+      <p class="sub" id="status">Számok betöltése…</p>
+    </header>
+
+    <section class="player" aria-label="Lejátszó">
+      <div class="now">
+        <span class="label">Most szól</span>
+        <span class="title" id="nowTitle">Nincs kiválasztott szám</span>
+      </div>
+
+      <div class="progress">
+        <span class="time" id="curTime">0:00</span>
+        <input type="range" id="seek" min="0" max="0" step="0.1" value="0" aria-label="Pozíció">
+        <span class="time" id="durTime">0:00</span>
+      </div>
+
+      <div class="controls">
+        <button id="prevBtn" class="btn" title="Előző szám" aria-label="Előző szám">⏮</button>
+        <button id="playBtn" class="btn primary" title="Lejátszás" aria-label="Lejátszás">▶</button>
+        <button id="pauseBtn" class="btn" title="Szünet" aria-label="Szünet">⏸</button>
+        <button id="stopBtn" class="btn" title="Leállítás" aria-label="Leállítás">⏹</button>
+        <button id="replayBtn" class="btn" title="Újrajátszás az elejéről" aria-label="Újrajátszás">↺</button>
+        <button id="nextBtn" class="btn" title="Következő szám" aria-label="Következő szám">⏭</button>
+      </div>
+
+      <div class="toggles">
+        <button id="shuffleBtn" class="toggle" aria-pressed="false">🔀 Véletlen sorrend</button>
+        <button id="loopBtn" class="toggle" aria-pressed="false">🔁 Végtelen ismétlés: KI</button>
+        <label class="volume">🔊
+          <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Hangerő">
+        </label>
+      </div>
+    </section>
+
+    <section class="list" aria-label="Számok">
+      <input type="search" id="filter" placeholder="Keresés a számok között…" aria-label="Keresés">
+      <ol id="trackList"></ol>
+    </section>
+  </main>
+
+  <audio id="audio" preload="metadata"></audio>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
